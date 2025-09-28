@@ -72,8 +72,7 @@ class ValueIteration(AbstractSolver):
             #   YOUR IMPLEMENTATION HERE   #
             ################################
             values = self.one_step_lookahead(each_state)
-            best_action_value = np.max(values)
-            self.V[each_state] = best_action_value
+            self.V[each_state] = np.max(values)
 
         # Dont worry about this part
         self.statistics[Statistics.Rewards.value] = np.sum(self.V)
@@ -144,8 +143,7 @@ class ValueIteration(AbstractSolver):
             #   YOUR IMPLEMENTATION HERE   #
             ################################
             values = self.one_step_lookahead(state)
-            best_action = np.argmax(values)
-            return best_action
+            return np.argmax(values)
 
         return policy_fn
 
@@ -197,14 +195,27 @@ class AsynchVI(ValueIteration):
         # Do a one-step lookahead to find the best action       #
         # Update the value function. Ref: Sutton book eq. 4.10. #
         #########################################################
-        for s in range(self.env.observation_space.n):
-            # Do a one-step lookahead to find the best action
-            A = self.one_step_lookahead(s)
+        # for s in range(self.env.observation_space.n):
+        #     # Do a one-step lookahead to find the best action
+        #     A = self.one_step_lookahead(s)
+        #     best_action_value = np.max(A)
+        #     priority = -abs(self.V[s] - best_action_value)
+        #     self.pq.update(s, priority)
+        # state = self.pq.pop()
+        # self.V[state] = self.one_step_lookahead(state).max()
+
+        if not self.pq.isEmpty():
+            state = self.pq.pop()
+
+            A = self.one_step_lookahead(state)
             best_action_value = np.max(A)
-            priority = -abs(self.V[s] - best_action_value)
-            self.pq.update(s, priority)
-        state = self.pq.pop()
-        self.V[state] = self.one_step_lookahead(state).max()
+            self.V[state] = best_action_value
+
+            for s in self.pred.get(state, []):
+                A = self.one_step_lookahead(s)
+                pred_best_value = np.max(A)
+                priority = -abs(self.V[s] - pred_best_value)
+                self.pq.update(s, priority)
 
         # you can ignore this part
         self.statistics[Statistics.Rewards.value] = np.sum(self.V)

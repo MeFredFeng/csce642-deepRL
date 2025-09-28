@@ -106,10 +106,8 @@ class PolicyIteration(AbstractSolver):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
         num_states = self.env.observation_space.n
-        num_actions = self.env.action_space.n
         gamma = self.options.gamma
 
-        # Build P_pi and R_pi
         P_pi = np.zeros((num_states, num_states))
         R_pi = np.zeros(num_states)
         for s in range(num_states):
