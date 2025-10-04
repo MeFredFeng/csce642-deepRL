@@ -61,7 +61,7 @@ class MonteCarlo(AbstractSolver):
         # An episode is an array of (state, action, reward) tuples
         episode = []
         state, _ = self.env.reset()
-        discount_factor = self.options.gamma
+        gamma = self.options.gamma
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
@@ -74,12 +74,12 @@ class MonteCarlo(AbstractSolver):
                 break
             state = next_state
 
-        discount_factor = self.options.gamma
+        gamma = self.options.gamma
         visited = set()
         G = 0
         for t in reversed(range(len(episode))):
             state, action, reward = episode[t]
-            G = reward + discount_factor * G
+            G = reward + gamma * G
             if (state, action) not in visited:
                 visited.add((state, action))
                 self.returns_sum[(state, action)] += G
@@ -110,9 +110,10 @@ class MonteCarlo(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
-            A = np.ones(nA, dtype=float) * self.options.epsilon / nA
+            epsilon = self.options.epsilon
+            A = np.ones(nA, dtype=float) * epsilon / nA
             best_action = np.argmax(self.Q[observation])
-            A[best_action] += 1.0 - self.options.epsilon
+            A[best_action] += 1.0 - epsilon
             return A
 
         return policy_fn
