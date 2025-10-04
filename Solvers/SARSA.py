@@ -47,6 +47,19 @@ class Sarsa(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        action_probs = self.epsilon_greedy_action(state)
+        action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+        for t in range(self.options.steps):
+            next_state, reward, done, _ = self.step(action)
+            next_action_probs = self.epsilon_greedy_action(next_state)
+            next_action = np.random.choice(np.arange(len(next_action_probs)), p=next_action_probs)
+            td_target = reward + self.options.gamma * self.Q[next_state][next_action] * (not done)
+            td_delta = td_target - self.Q[state][action]
+            self.Q[state][action] += self.options.alpha * td_delta
+            if done:
+                break
+            state = next_state
+            action = next_action
 
     def __str__(self):
         return "Sarsa"
@@ -63,6 +76,7 @@ class Sarsa(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            return np.argmax(self.Q[state])
 
         return policy_fn
 
@@ -80,6 +94,12 @@ class Sarsa(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        nA = self.env.action_space.n
+        epsilon = self.options.epsilon
+        action_probs = np.ones(nA) * epsilon / nA
+        best_action = np.argmax(self.Q[state])
+        action_probs[best_action] += (1.0 - epsilon)
+        return action_probs
 
     def plot(self, stats, smoothing_window=20, final=False):
         plotting.plot_episode_stats(stats, smoothing_window, final=final)
