@@ -101,7 +101,14 @@ class DQN(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-
+        action_probs = np.ones(self.env.action_space.n) * (self.options.epsilon / self.env.action_space.n)
+        state_tensor = torch.as_tensor(state, dtype=torch.float32)
+        q_values = self.model(state_tensor)
+        best_action = torch.argmax(q_values).item()
+        action_probs[best_action] += (1.0 - self.options.epsilon)
+        action_probs = np.clip(action_probs, 1e-12, 1.0)
+        action_probs = action_probs / action_probs.sum()
+        return action_probs
 
     def compute_target_values(self, next_states, rewards, dones):
         """
@@ -113,7 +120,12 @@ class DQN(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-
+        dones = dones.float()
+        rewards = rewards.float()
+        next_q_values = self.target_model(next_states)
+        max_next_q_values, _ = torch.max(next_q_values, dim=1)
+        target_q = rewards + self.options.gamma * max_next_q_values * (1 - dones)
+        return target_q
 
     def replay(self):
         """
@@ -188,6 +200,19 @@ class DQN(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            probs = self.epsilon_greedy(state)
+            action = np.random.choice(np.arange(len(probs)), p=probs)
+            next_state, reward, done, env_step = self.step(action)
+            self.memorize(state, action, reward, next_state, done)
+            self.replay()
+            if (self.options.update_target_estimator_every is not None and
+                    self.options.update_target_estimator_every > 0 and
+                    self.n_steps % self.options.update_target_estimator_every == 0):
+                self.update_target_model()
+            self.n_steps += 1
+            state = next_state
+            if done:
+                break
 
 
     def __str__(self):
