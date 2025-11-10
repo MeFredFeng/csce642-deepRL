@@ -6,6 +6,13 @@
 # Contributors:
 # The core code base was developed by Guni Sharon (guni@tamu.edu).
 # The PyTorch code was developed by Sheelabhadra Dey (sheelabhadra@tamu.edu).
+#
+# Fix the segmentation fault error:
+# caused by multiple threads in OpenBLAS/MKL when using PyTorch with Anaconda
+# export OMP_NUM_THREADS=1
+# export MKL_NUM_THREADS=1
+# export OPENBLAS_NUM_THREADS=1
+# export KMP_DUPLICATE_LIB_OK=TRUE
 
 import torch
 import torch.nn as nn
@@ -76,6 +83,12 @@ class Reinforce(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        returns = []
+        R = 0.0
+        for r in reversed(rewards):
+            R = float(r) + gamma * R
+            returns.insert(0, R)
+        return returns
 
     def select_action(self, state):
         """
@@ -138,7 +151,16 @@ class Reinforce(AbstractSolver):
             # Run update_model() only ONCE #
             # at the END of an episode.    #
             ################################
-
+            action, prob, baseline = self.select_action(state)
+            next_state, reward, done, env_step = self.step(action)
+            rewards.append(reward)
+            action_probs.append(prob)
+            baselines.append(baseline)
+            state = next_state
+            if done:
+                break
+        if len(rewards) > 0:
+            self.update_model(rewards, action_probs, baselines)
 
     def pg_loss(self, advantage, prob):
         """
@@ -159,6 +181,8 @@ class Reinforce(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        eps = 1e-8
+        return -torch.log(prob + eps) * advantage
 
 
     def __str__(self):
