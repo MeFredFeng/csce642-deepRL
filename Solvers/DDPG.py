@@ -154,6 +154,11 @@ class DDPG(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        dones = dones.float()
+        rewards = rewards.float()
+        next_actions = self.target_actor_critic.pi(next_states)
+        next_q_values = self.target_actor_critic.q(next_states, next_actions)
+        return rewards + (1 - dones) * self.options.gamma * next_q_values
 
 
     def replay(self):
@@ -220,7 +225,15 @@ class DDPG(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
-            
+            action = self.select_action(state)
+            next_state, reward, done, _ = self.step(action)
+            self.memorize(state, action, reward, next_state, done)
+            self.replay()
+            self.update_target_networks()
+            if done:
+                break
+            state = next_state
+
 
     def q_loss(self, current_q, target_q):
         """
@@ -236,6 +249,7 @@ class DDPG(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        return F.mse_loss(current_q, target_q, reduction="none")
 
     def pi_loss(self, states):
         """
@@ -258,6 +272,11 @@ class DDPG(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        # Deterministic policy gradient: maximize Q(s, pi(s)) -> minimize -Q
+        actions = self.actor_critic.pi(states)
+        q_values = self.actor_critic.q(states, actions)
+        # return unreduced loss (negative Q)
+        return -q_values
 
     def __str__(self):
         return "DDPG"
